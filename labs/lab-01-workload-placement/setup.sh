@@ -10,9 +10,29 @@ NAMESPACE="drainlab"
 WORKER_ONE="${CLUSTER_NAME}-worker"
 WATCH_PID=""
 NODE_WATCH_PID=""
+CLUSTER_READY=false
+
+show_current_state() {
+  echo
+  echo "--- Current lab state ---"
+  if [[ "$CLUSTER_READY" != true ]]; then
+    kind get clusters || true
+    echo "-------------------------"
+    return
+  fi
+
+  kubectl get nodes
+  if kubectl get namespace "$NAMESPACE" >/dev/null 2>&1; then
+    kubectl get deployment,pods -n "$NAMESPACE" -o wide
+  else
+    echo "Namespace '$NAMESPACE' has not been created yet."
+  fi
+  echo "-------------------------"
+}
 
 confirm() {
   local answer
+  show_current_state
   read -r -p "$1 [y/N] " answer
   [[ "$answer" =~ ^([yY]|[yY][eE][sS])$ ]]
 }
@@ -105,6 +125,7 @@ echo "Waiting for every node to become Ready before starting the lab."
 kubectl wait --for=condition=Ready node --all --timeout=120s
 stop_node_watch
 kubectl get nodes
+CLUSTER_READY=true
 
 if confirm "02: create the drainlab Namespace"; then
   kubectl apply -f "$ROOT_DIR/02-namespace/namespace.yaml"

@@ -17,6 +17,17 @@ command -v kind >/dev/null || {
   exit 1
 }
 
+echo "--- Current Lab 01 state ---"
+if kind get clusters | grep -Fxq "$CLUSTER_NAME"; then
+  if command -v kubectl >/dev/null; then
+    kubectl --context "$CONTEXT_NAME" get nodes 2>/dev/null || true
+    kubectl --context "$CONTEXT_NAME" get deployment,pods -n drainlab -o wide 2>/dev/null || true
+  fi
+else
+  echo "Kind cluster '$CLUSTER_NAME' does not exist."
+fi
+echo "----------------------------"
+
 if [[ "${1:-}" != "--yes" ]] && ! confirm "Delete the local Kind cluster '$CLUSTER_NAME' and all resources inside it"; then
   echo "Cleanup cancelled."
   exit 0
