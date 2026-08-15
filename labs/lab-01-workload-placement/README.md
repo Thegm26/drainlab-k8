@@ -28,6 +28,11 @@ Deployment change, it starts a live Pod watch and waits so you can observe
 states such as `Pending`, `ContainerCreating`, `Running`, and `Terminating`.
 Its final prompt can remove the local Kind cluster as part of the replay.
 
+## Visual explanation
+
+The GitHub Pages visual explains why two co-located replicas are not enough:
+`https://thegm26.github.io/drainlab-k8/lab-01/`.
+
 ## Clean up
 
 ```bash
