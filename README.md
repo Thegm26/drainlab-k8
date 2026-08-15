@@ -67,6 +67,27 @@ kubectl get nodes
 Then answer in your own words: **what is a control-plane node, what is a
 worker node, and why should ordinary application Pods normally run on workers?**
 
+## Guided labs
+
+Each runnable scenario lives in its own directory. Lab 01 replays the
+implemented placement lessons with a yes/no checkpoint before every cluster
+action:
+
+```bash
+./labs/lab-01-workload-placement/setup.sh
+```
+
+Lab 01 can optionally recreate the local `drainlab-lab` Kind cluster.
+That deletes only its running Kubernetes resources; all manifests remain in
+this repository. It applies lessons 02–06 in sequence, then offers the
+cordon-and-delete experiment that demonstrates hard pod anti-affinity.
+
+To remove only the cluster created by Lab 01 afterwards:
+
+```bash
+./labs/lab-01-workload-placement/cleanup.sh
+```
+
 ## Scope
 
 This is a learning and experiment repository, not a production Kubernetes
