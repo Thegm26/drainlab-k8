@@ -5,18 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DrainLab Lab 01 · Workload placement visualizer</title>
   <style>
-    :root { --ink:#172033; --muted:#70809a; --line:#d9e1ec; --blue:#4f7cff; --blue-soft:#edf2ff; --green:#24bd7a; --red:#ef6074; --bg:#f8fafc; }
+    :root { --ink:#172033; --muted:#70809a; --line:#d9e1ec; --blue:#4f7cff; --blue-soft:#edf2ff; --green:#24bd7a; --red:#ef6074; --amber:#f2a948; --bg:#f8fafc; }
     * { box-sizing:border-box; }
     body { margin:0; min-height:100vh; display:grid; place-items:center; padding:32px; color:var(--ink); background:var(--bg); font:16px/1.5 Inter,ui-sans-serif,system-ui,sans-serif; }
-    main { width:min(820px,100%); }
+    main { width:min(860px,100%); }
     h1 { margin:0; font-size:clamp(1.8rem,4vw,2.7rem); letter-spacing:-.055em; }
     .intro { margin:5px 0 22px; color:var(--muted); }
+    .scenario { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+    .scenario button, .controls button { border:1px solid var(--line); border-radius:8px; padding:10px 13px; background:#fff; color:var(--ink); font:inherit; font-weight:720; cursor:pointer; }
+    .scenario button.active { border-color:var(--blue); background:var(--blue-soft); color:#294da9; }
     .controls { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px; }
-    button { border:1px solid var(--line); border-radius:8px; padding:10px 13px; background:#fff; color:var(--ink); font:inherit; font-weight:720; cursor:pointer; }
-    button:hover { border-color:var(--blue); background:var(--blue-soft); }
+    button:hover:not(:disabled) { border-color:var(--blue); background:var(--blue-soft); }
     button.fail { border-color:#efb7c0; color:#bd3147; }
-    button.fail:hover { background:#fff0f2; }
+    button.fail:hover:not(:disabled) { background:#fff0f2; }
     button:disabled { opacity:.45; cursor:not-allowed; }
+    .rule { margin:0 0 18px; padding:10px 13px; border-left:3px solid var(--blue); border-radius:0 7px 7px 0; background:#eef3ff; color:#405373; font-size:.9rem; }
+    code { padding:1px 4px; border-radius:4px; background:#e5ecfb; color:#294da9; }
     .cluster { padding:18px; border:2px solid #b9c9df; border-radius:14px; background:#fff; box-shadow:0 14px 35px rgba(31,47,73,.07); }
     .cluster-head { display:flex; justify-content:space-between; gap:12px; margin-bottom:17px; color:#526784; font-size:.78rem; font-weight:820; letter-spacing:.065em; text-transform:uppercase; }
     .cluster-head strong { color:var(--ink); }
@@ -24,86 +28,90 @@
     .nodes { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
     .node { min-height:290px; padding:14px; border:1.5px solid #c7d3e3; border-radius:10px; background:#fbfdff; transition:.25s; }
     .node.failed { border-color:var(--red); background:#fff5f6; filter:saturate(.58); }
+    .node.changed { border-color:var(--amber); background:#fffaf0; }
     .node-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
     .node-name { display:flex; align-items:center; gap:7px; font-size:.9rem; font-weight:800; }
     .node-dot { width:9px; height:9px; border-radius:50%; background:var(--green); box-shadow:0 0 0 3px #e5f8ef; }
     .failed .node-dot { background:var(--red); box-shadow:0 0 0 3px #ffeaed; }
+    .changed .node-dot { background:var(--amber); box-shadow:0 0 0 3px #fff0d2; }
     .node-state { color:#178957; font-size:.75rem; font-weight:750; }
     .failed .node-state { color:#ca3c50; }
-    .load { margin:16px 0 12px; }
-    .load-label { display:flex; justify-content:space-between; color:#61738e; font-size:.75rem; font-weight:700; }
-    .bar { height:7px; margin-top:6px; overflow:hidden; border-radius:99px; background:#e8eef6; }
-    .fill { height:100%; border-radius:inherit; background:var(--green); transition:width .25s,background .25s; }
-    .fill.heavy { background:#f2a948; }
-    .fill.full { background:var(--red); }
-    .pods { display:grid; gap:8px; }
-    .pod { display:flex; align-items:center; gap:8px; padding:8px; border:1px solid #cbd8ff; border-radius:7px; background:var(--blue-soft); color:#35517e; font-size:.78rem; font-weight:720; }
-    .pod-icon { position:relative; width:18px; height:18px; flex:0 0 18px; border:2px solid var(--blue); border-radius:4px; }
-    .pod-icon::after { content:""; position:absolute; right:-5px; top:-5px; width:7px; height:7px; border:1.5px solid #fff; border-radius:50%; background:var(--green); }
-    .pod.unavailable { border-color:#e5adb6; background:#fff0f2; color:#a54454; text-decoration:line-through; }
-    .pod.unavailable .pod-icon { border-color:var(--red); }
-    .pod.unavailable .pod-icon::after { background:var(--red); }
-    .empty { display:grid; place-items:center; height:150px; color:#a5b0c1; font-size:.8rem; }
-    .status { display:flex; align-items:center; gap:10px; margin-top:18px; padding:12px 14px; border-left:3px solid var(--blue); border-radius:0 7px 7px 0; background:#eef3ff; color:#405373; font-size:.9rem; }
-    .status.down { border-color:var(--red); background:#fff0f2; color:#a63f50; }
-    .count { font-weight:850; color:var(--ink); }
-    @media (max-width:620px) { body { padding:20px; } .nodes { grid-template-columns:1fr; } .node { min-height:180px; } }
+    .changed .node-state { color:#9b6915; }
+    .node-label { min-height:18px; margin:7px 0 13px; color:#61738e; font-size:.7rem; }
+    .load { margin:12px 0; }.load-label { display:flex; justify-content:space-between; color:#61738e; font-size:.75rem; font-weight:700; }
+    .bar { height:7px; margin-top:6px; overflow:hidden; border-radius:99px; background:#e8eef6; }.fill { height:100%; border-radius:inherit; background:var(--green); transition:width .25s,background .25s; }.fill.heavy { background:var(--amber); }.fill.full { background:var(--red); }
+    .pods { display:grid; gap:8px; }.pod { display:flex; align-items:center; gap:8px; padding:8px; border:1px solid #cbd8ff; border-radius:7px; background:var(--blue-soft); color:#35517e; font-size:.78rem; font-weight:720; }.pod-icon { position:relative; width:18px; height:18px; flex:0 0 18px; border:2px solid var(--blue); border-radius:4px; }.pod-icon::after { content:""; position:absolute; right:-5px; top:-5px; width:7px; height:7px; border:1.5px solid #fff; border-radius:50%; background:var(--green); }.pod.lost { border-color:#e5adb6; background:#fff0f2; color:#a54454; text-decoration:line-through; }.pod.lost .pod-icon { border-color:var(--red); }.pod.lost .pod-icon::after { background:var(--red); }.pod.pending { border-color:#ecd293; background:#fffaf0; color:#946719; }.pod.pending .pod-icon { border-style:dashed; border-color:var(--amber); }.pod.pending .pod-icon::after { background:var(--amber); }
+    .empty { display:grid; place-items:center; height:150px; color:#a5b0c1; font-size:.8rem; }.status { margin-top:18px; padding:12px 14px; border-left:3px solid var(--blue); border-radius:0 7px 7px 0; background:#eef3ff; color:#405373; font-size:.9rem; }.status.down { border-color:var(--red); background:#fff0f2; color:#a63f50; }.status.note { border-color:var(--amber); background:#fffaf0; color:#86601b; }.count { font-weight:850; color:var(--ink); }
+    @media (max-width:620px) { body { padding:20px; }.nodes { grid-template-columns:1fr; }.node { min-height:180px; } }
   </style>
 </head>
 <body>
   <main>
     <h1>DrainLab Lab 01: workload placement</h1>
-    <p class="intro">Two replicas are not automatically safe. Scale the deployment, then fail its only occupied worker.</p>
+    <p class="intro">Compare a co-located deployment with the same deployment protected by hard pod anti-affinity.</p>
+    <div class="scenario" aria-label="Scenario">
+      <button id="without" class="active">Without anti-affinity</button>
+      <button id="with">With required pod anti-affinity</button>
+    </div>
+    <p id="rule" class="rule"></p>
     <div class="controls">
       <button id="scale">Scale deployment +1</button>
       <button id="fail" class="fail">Fail worker-1</button>
+      <button id="label">Change worker-2 topology label</button>
       <button id="reset">Reset</button>
     </div>
     <section class="cluster" aria-label="Kubernetes cluster visualization">
       <div class="cluster-head"><strong><i class="cluster-icon"></i>kind-drainlab-lab</strong><span>namespace / drainlab</span></div>
       <div class="nodes">
-        <article id="worker1" class="node">
-          <div class="node-top"><div class="node-name"><i class="node-dot"></i>worker-1</div><span class="node-state">Ready</span></div>
-          <div class="load"><div class="load-label"><span>requested CPU</span><span id="load-text">50%</span></div><div class="bar"><div id="fill" class="fill" style="width:50%"></div></div></div>
-          <div id="pods" class="pods"></div>
-        </article>
-        <article class="node">
-          <div class="node-top"><div class="node-name"><i class="node-dot"></i>worker-2</div><span class="node-state">Ready</span></div>
-          <div class="empty">no web Pods</div>
-        </article>
+        <article id="worker1" class="node"><div class="node-top"><div class="node-name"><i class="node-dot"></i>worker-1</div><span class="node-state">Ready</span></div><div class="node-label">topology: worker-1</div><div class="load"><div class="load-label"><span>requested CPU</span><span id="load1">50%</span></div><div class="bar"><div id="fill1" class="fill" style="width:50%"></div></div></div><div id="pods1" class="pods"></div></article>
+        <article id="worker2" class="node"><div class="node-top"><div class="node-name"><i class="node-dot"></i>worker-2</div><span class="node-state">Ready</span></div><div id="label2" class="node-label">topology: worker-2</div><div class="load"><div class="load-label"><span>requested CPU</span><span id="load2">0%</span></div><div class="bar"><div id="fill2" class="fill" style="width:0%"></div></div></div><div id="pods2" class="pods"></div></article>
       </div>
     </section>
     <div id="status" class="status" aria-live="polite"></div>
   </main>
   <script>
-    const state = { replicas: 2, failed: false, max: 4 };
+    const state = { mode: 'without', replicas: 2, failed: false, labelChanged: false };
     const $ = (id) => document.getElementById(id);
+    const pod = (name, status) => `<div class="pod ${status.toLowerCase()}"><i class="pod-icon"></i>${name}<span style="margin-left:auto">${status}</span></div>`;
+    const setLoad = (id, percent) => { $(id).textContent = `${percent}%`; const fill = $(`fill${id.slice(-1)}`); fill.style.width = `${percent}%`; fill.className = `fill ${percent >= 100 ? 'full' : percent >= 75 ? 'heavy' : ''}`; };
 
     function render() {
-      const percent = state.replicas * 25;
-      $('pods').innerHTML = Array.from({ length: state.replicas }, (_, index) => `
-        <div class="pod ${state.failed ? 'unavailable' : ''}">
-          <i class="pod-icon"></i>web-${index + 1}
-          <span style="margin-left:auto">${state.failed ? 'Unavailable' : 'Running'}</span>
-        </div>
-      `).join('');
-      $('load-text').textContent = `${percent}%`;
-      $('fill').style.width = `${percent}%`;
-      $('fill').className = `fill ${percent >= 100 ? 'full' : percent >= 75 ? 'heavy' : ''}`;
+      const protectedMode = state.mode === 'with';
+      const scheduled = protectedMode ? Math.min(state.replicas, 2) : state.replicas;
+      const worker1Pods = protectedMode ? (state.failed ? [pod('web-1', 'Lost')] : [pod('web-1', 'Running')]) : Array.from({ length: state.replicas }, (_, index) => pod(`web-${index + 1}`, state.failed ? 'Lost' : 'Running'));
+      const worker2Pods = protectedMode ? [pod('web-2', 'Running')] : [];
+      const pendingPods = protectedMode ? [
+        ...(state.failed ? ['web-1 replacement'] : []),
+        ...Array.from({ length: Math.max(0, state.replicas - 2) }, (_, index) => `web-${index + 3}`)
+      ] : [];
+
+      $('pods1').innerHTML = worker1Pods.join('');
+      $('pods2').innerHTML = worker2Pods.join('') || '<div class="empty">no web Pods</div>';
+      if (pendingPods.length) $('pods2').innerHTML += pendingPods.map((name) => pod(name, 'Pending')).join('');
+      setLoad('load1', state.failed ? 0 : (protectedMode ? 25 : state.replicas * 25));
+      setLoad('load2', protectedMode ? 25 : 0);
       $('worker1').classList.toggle('failed', state.failed);
+      $('worker2').classList.toggle('changed', protectedMode && state.labelChanged);
       $('worker1').querySelector('.node-state').textContent = state.failed ? 'NotReady' : 'Ready';
-      $('scale').disabled = state.failed || state.replicas === state.max;
+      $('worker2').querySelector('.node-state').textContent = protectedMode && state.labelChanged ? 'Label changed' : 'Ready';
+      $('label2').textContent = protectedMode && state.labelChanged ? 'topology: changed after scheduling' : 'topology: worker-2';
+      $('without').classList.toggle('active', !protectedMode);
+      $('with').classList.toggle('active', protectedMode);
+      $('rule').innerHTML = protectedMode ? '<strong>Hard rule:</strong> a new <code>app: web</code> Pod cannot share a <code>kubernetes.io/hostname</code> with another <code>app: web</code> Pod.' : '<strong>No placement rule:</strong> the scheduler may place every replica on the same feasible worker.';
+      $('label').disabled = !protectedMode || state.labelChanged;
+      $('scale').disabled = state.failed || state.replicas === 4;
       $('fail').disabled = state.failed;
       const status = $('status');
-      status.classList.toggle('down', state.failed);
-      status.innerHTML = state.failed
-        ? `<strong>worker-1 failed</strong> · <span class="count">0 / ${state.replicas}</span> web replicas available`
-        : `<span class="count">${state.replicas} / ${state.replicas}</span> web replicas available · worker-2 is unused`;
+      status.className = `status ${state.failed ? 'down' : protectedMode && state.labelChanged ? 'note' : ''}`;
+      status.innerHTML = state.failed ? (protectedMode ? '<strong>worker-1 failed.</strong> `web-2` remains available on worker-2; the replacement stays <span class="count">Pending</span> because it cannot share that worker.' : `<strong>worker-1 failed.</strong> <span class="count">0 / ${state.replicas}</span> web replicas remain available.`) : protectedMode && state.labelChanged ? '<strong>Topology label changed after scheduling.</strong> The existing Pods keep running: <code>IgnoredDuringExecution</code> does not evict them.' : protectedMode ? `<span class="count">${scheduled} / ${state.replicas}</span> web replicas scheduled across separate workers.` : `<span class="count">${state.replicas} / ${state.replicas}</span> web replicas are all on worker-1.`;
     }
 
+    $('without').onclick = () => { state.mode = 'without'; state.replicas = 2; state.failed = false; state.labelChanged = false; render(); };
+    $('with').onclick = () => { state.mode = 'with'; state.replicas = 2; state.failed = false; state.labelChanged = false; render(); };
     $('scale').onclick = () => { state.replicas++; render(); };
     $('fail').onclick = () => { state.failed = true; render(); };
-    $('reset').onclick = () => { state.replicas = 2; state.failed = false; render(); };
+    $('label').onclick = () => { state.labelChanged = true; render(); };
+    $('reset').onclick = () => { state.replicas = 2; state.failed = false; state.labelChanged = false; render(); };
     render();
   </script>
 </body>
