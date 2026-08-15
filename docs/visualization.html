@@ -94,7 +94,7 @@
       $('worker2').classList.toggle('changed', protectedMode && state.labelChanged);
       $('worker1').querySelector('.node-state').textContent = state.failed ? 'NotReady' : 'Ready';
       $('worker2').querySelector('.node-state').textContent = protectedMode && state.labelChanged ? 'Label changed' : 'Ready';
-      $('label2').textContent = protectedMode && state.labelChanged ? 'topology: changed after scheduling' : 'topology: worker-2';
+      $('label2').textContent = protectedMode && state.labelChanged ? 'topology: worker-1 (changed)' : 'topology: worker-2';
       $('without').classList.toggle('active', !protectedMode);
       $('with').classList.toggle('active', protectedMode);
       $('rule').innerHTML = protectedMode ? '<strong>Hard rule:</strong> a new <code>app: web</code> Pod cannot share a <code>kubernetes.io/hostname</code> with another <code>app: web</code> Pod.' : '<strong>No placement rule:</strong> the scheduler may place every replica on the same feasible worker.';
@@ -103,7 +103,7 @@
       $('fail').disabled = state.failed;
       const status = $('status');
       status.className = `status ${state.failed ? 'down' : protectedMode && state.labelChanged ? 'note' : ''}`;
-      status.innerHTML = state.failed ? (protectedMode ? '<strong>worker-1 failed.</strong> `web-2` remains available on worker-2; the replacement stays <span class="count">Pending</span> because it cannot share that worker.' : `<strong>worker-1 failed.</strong> <span class="count">0 / ${state.replicas}</span> web replicas remain available.`) : protectedMode && state.labelChanged ? '<strong>Topology label changed after scheduling.</strong> The existing Pods keep running: <code>IgnoredDuringExecution</code> does not evict them.' : protectedMode ? `<span class="count">${scheduled} / ${state.replicas}</span> web replicas scheduled across separate workers.` : `<span class="count">${state.replicas} / ${state.replicas}</span> web replicas are all on worker-1.`;
+      status.innerHTML = state.failed ? (protectedMode ? '<strong>worker-1 failed.</strong> <code>web-2</code> remains available on worker-2; the replacement stays <span class="count">Pending</span> because it cannot share that worker.' : `<strong>worker-1 failed.</strong> <span class="count">0 / ${state.replicas}</span> web replicas remain available.`) : protectedMode && state.labelChanged ? '<strong>worker-2 now shares worker-1’s topology label.</strong> The existing Pods keep running: <code>IgnoredDuringExecution</code> does not evict them.' : protectedMode ? `<span class="count">${scheduled} / ${state.replicas}</span> web replicas scheduled across separate workers.` : `<span class="count">${state.replicas} / ${state.replicas}</span> web replicas are all on worker-1.`;
     }
 
     $('without').onclick = () => { state.mode = 'without'; state.replicas = 2; state.failed = false; state.labelChanged = false; render(); };
